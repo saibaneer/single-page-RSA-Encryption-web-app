@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSA Decryption</title>
+</head>
+<body>
+    <h1>RSA Decryption</h1>
+    <form id="decryptForm">
+        <label for="encryptedMessage">Encrypted Message:</label><br>
+        <textarea id="encryptedMessage" name="encryptedMessage" rows="4" cols="50"></textarea><br><br>
+        
+        <label for="privateKeyPem">Private Key PEM:</label><br>
+        <textarea id="privateKeyPem" name="privateKeyPem" rows="10" cols="50"></textarea><br><br>
+        
+        <button type="button" onclick="decryptMessage()">Decrypt Message</button>
+    </form>
+    <h2>Decrypted Message:</h2>
+    <div id="decryptedMessageContainer"></div>
+
+    <script>
+        async function decryptMessage() {
+            const encryptedMessage = document.getElementById('encryptedMessage').value;
+            const privateKeyPem = document.getElementById('privateKeyPem').value;
+
+            try {
+                const response = await fetch('/decrypt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ encryptedMessage, privateKeyPem }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error);
+                }
+
+                const data = await response.json();
+                displayDecryptedMessage(data.decryptedMessage);
+            } catch (error) {
+                console.error('Decryption error:', error);
+                document.getElementById('decryptedMessageContainer').innerText = 'Error: ' + error.message;
+            }
+        }
+
+        function displayDecryptedMessage(decryptedMessage) {
+            const container = document.getElementById('decryptedMessageContainer');
+            container.innerHTML = ''; // Clear previous content
+
+            // Regular expression to find URLs (simplified to match GIF and potentially other image formats dynamically)
+            const urlPattern = /(https?:\/\/\S+\.(gif|png|jpg))/gi;
+            let text = decryptedMessage;
+            let match;
+
+            while ((match = urlPattern.exec(decryptedMessage)) !== null) {
+                const urlIndex = match.index;
+                const urlLength = match[0].length;
+                
+                // Append preceding text
+                const textPart = text.slice(0, urlIndex);
+                container.appendChild(document.createTextNode(textPart));
+
+                // Create and append the image
+                const img = document.createElement('img');
+                img.src = match[0];
+                img.alt = 'Dynamic Image from Decrypted Message';
+                img.style.maxWidth = '100%'; // Ensure the image is responsive
+                container.appendChild(img);
+
+                // Update text to be the remaining part after the URL
+                text = text.slice(urlIndex + urlLength);
+            }
+
+            // Append any remaining text
+            if (text) {
+                container.appendChild(document.createTextNode(text));
+            }
+        }
+    </script>
+</body>
+</html>
